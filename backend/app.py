@@ -22,7 +22,7 @@ app = FastAPI(
     title="Sentiment Analysis POC API - Phase 2",
     swagger_ui_parameters={"persistAuthorization": True}
 )
-
+print("Loaded .env from project root")
 # --- Routers ---
 app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
 app.include_router(upload_routes.router, tags=["File Uploads"])  # <-- added
