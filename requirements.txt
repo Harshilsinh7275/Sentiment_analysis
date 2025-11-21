@@ -1,7 +1,7 @@
 # ==== Core API Framework ====
 fastapi==0.115.0
 uvicorn[standard]==0.30.0
-
+gunicorn
 # ==== Machine Learning / NLP ====
 transformers==4.44.2
 torch==2.3.1
@@ -23,3 +23,22 @@ requests==2.32.3
 bcrypt==4.1.2
 PyJWT==2.9.0
 python-multipart==0.0.9
+aiohttp 
+httpx
+
+azure-ai-ml
+azure-identity
+azure-storage-blob
+transformers
+torch
+pandas
+
+# ==== New Dependencies for Local Sentiment Analysis ====
+azure-core
+python-dateutil
+tqdm    # optional but recommended for transformers model downloads
+
+
+sentencepiece
+transformers[sentencepiece]
+pydantic

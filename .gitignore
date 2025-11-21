@@ -1,0 +1,84 @@
+# ========================
+# Python
+# ========================
+__pycache__
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.tmp
+
+# Byte-compiled / optimized / DLL files
+*.so
+*.dll
+
+# ========================
+# Environments
+# ========================
+.env
+.env.*
+venv
+.venv
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+
+# Poetry / Pipenv / Conda
+.poetry/
+Pipfile*
+poetry.lock
+conda-env.yaml
+
+# ========================
+# VSCode & IDE Files
+# ========================
+.vscode
+.idea/
+*.swp
+*.swo
+
+# ========================
+# Logs & DB Dumps
+# ========================
+*.log
+*.sqlite
+*.db
+
+# ========================
+# Build Artifacts
+# ========================
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ========================
+# HuggingFace Cache (models are huge)
+# ========================
+/home/huggingface/
+huggingface/
+hf_cache/
+transformers_cache/
+~/.cache/huggingface/
+
+# ========================
+# Azure Specific
+# ========================
+azureml/
+*.azureml
+
+# ========================
+# PyTest / Coverage
+# ========================
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ========================
+# OS Files
+# ========================
+.DS_Store
+Thumbs.db
