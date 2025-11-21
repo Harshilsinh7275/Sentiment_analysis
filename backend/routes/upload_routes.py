@@ -73,7 +73,7 @@ async def delete_file(file_id: str, current_user=Depends(get_current_user)):
         try:
             await azure_blob_service.delete_blob(file["blob_name"])
         except Exception as e:
-            print(f"⚠️ Azure delete failed: {e}")  # don't fail app, just log it
+            print(f" Azure delete failed: {e}")  # don't fail app, just log it
 
         # Delete metadata from MongoDB
         success = await db_service.delete_file(file_id)
@@ -85,5 +85,5 @@ async def delete_file(file_id: str, current_user=Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"🔥 Unexpected delete error: {e}")
+        print(f" Unexpected delete error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during file delete")

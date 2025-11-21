@@ -6,7 +6,7 @@ import bcrypt
 
 router = APIRouter()
 
-# 👇 Tell Swagger we use Bearer tokens
+
 bearer_scheme = HTTPBearer(auto_error=False)
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
