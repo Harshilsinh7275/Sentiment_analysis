@@ -14,11 +14,20 @@ blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONN_STR)
 container_client = blob_service_client.get_container_client(CONTAINER_NAME)
 
 
-async def upload_file_to_blob(content: bytes, filename: str):
-    """Upload bytes to Azure Blob Storage."""
-    blob_name = f"{uuid4()}_{filename}"
-    blob_client = container_client.get_blob_client(blob_name)
+async def upload_file_to_blob(content: bytes, filename: str, user_email: str, is_result=False):
+    """
+    Upload bytes to Azure Blob Storage inside user-specific folders.
+    Structure:
+      uploads/<email>/<filename>
+      results/<email>/<filename>
+    """
 
+    prefix = "results" if is_result else "uploads"
+
+    safe_email = user_email.replace("@", "_at_").replace(".", "_")
+    blob_name = f"{prefix}/{safe_email}/{uuid4()}_{filename}"
+
+    blob_client = container_client.get_blob_client(blob_name)
     await blob_client.upload_blob(content, overwrite=True)
 
     blob_url = (

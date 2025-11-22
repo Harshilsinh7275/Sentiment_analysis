@@ -17,7 +17,12 @@ async def upload_user_file(file: UploadFile = File(...), current_user=Depends(ge
 
     try:
         # Upload to Azure Blob
-        upload_result = await azure_blob_service.upload_file_to_blob(file.file, file.filename)
+        upload_result = await azure_blob_service.upload_file_to_blob(
+            await file.read(),
+            file.filename,
+            current_user["email"],
+            is_result=False
+        )
 
         # Prepare metadata model
         file_data = FileMeta(

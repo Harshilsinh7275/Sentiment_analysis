@@ -19,6 +19,7 @@ from ..services import db_service, azure_blob_service
 from ..sentiment_analysis import analyze_many, analyze_text, build_summary
 from .auth_routes import get_current_user
 from ..services.results_db_service import save_result_metadata
+from ..services.azure_blob_service import CONTAINER_NAME
 
 
 print(">>> LOADING analysis_routes (Azure Blob Result Storage Enabled) <<<")
@@ -135,7 +136,9 @@ async def start_linebyline_analysis(file_id: str, current_user=Depends(get_curre
 
     upload_resp = await azure_blob_service.upload_file_to_blob(
         result_content.encode("utf-8"),
-        save_filename
+        save_filename,
+        current_user["email"],
+        is_result=True
     )
 
     blob_url = upload_resp["url"]
@@ -201,7 +204,9 @@ async def start_summary_analysis(file_id: str, current_user=Depends(get_current_
 
     upload_resp = await azure_blob_service.upload_file_to_blob(
         result_content.encode("utf-8"),
-        save_filename
+        save_filename,
+        current_user["email"],
+        is_result=True
     )
 
     blob_url = upload_resp["url"]
@@ -221,84 +226,77 @@ async def start_summary_analysis(file_id: str, current_user=Depends(get_current_
     }
 
 
-# -------------------------------------------------------
+
 # 3) LIST RESULTS
-# -------------------------------------------------------
 @router.get("/results")
 async def list_analysis_results(current_user=Depends(get_current_user)):
-    results = await db_service.get_user_results(current_user["email"])
+    results = await db_service.get_results_by_user(current_user["email"])
     return {"results": results}
+from urllib.parse import urlparse
 
-
-# Helper for JSON serialization
-def datetime_converter(o):
-    if isinstance(o, datetime):
-        return o.isoformat()
-    return str(o)
-
-
-# -------------------------------------------------------
-# 4) DOWNLOAD RESULT (CSV or JSON)
-# -------------------------------------------------------
 @router.get("/download/{result_id}")
 async def download_result(
-    result_id: str, 
-    format: str = "csv", 
+    result_id: str,
+    format: str = "json",
     current_user=Depends(get_current_user)
 ):
     """
     Download a saved analysis result as CSV or JSON.
     """
 
-    # Fetch result document
-    result = await db_service.get_result_by_id(result_id)
+    # 1️⃣ Fetch metadata
+    result_meta = await db_service.get_result_by_id(result_id)
 
-    if not result or result.get("user_email") != current_user["email"]:
-        raise HTTPException(status_code=404, detail="Result not found or unauthorized.")
+    if not result_meta or result_meta["user_email"] != current_user["email"]:
+        raise HTTPException(status_code=404, detail="Result not found or unauthorized")
 
-    # Remove internal Mongo ID
-    result.pop("_id", None)
+    # 2️⃣ Extract blob name WITH FOLDERS
+    blob_url = result_meta["result_url"]
 
-    # -------------------------
-    # JSON DOWNLOAD
-    # -------------------------
+    parsed = urlparse(blob_url).path
+    # /sentiment-files/results/user_at_example_com/filename.json
+
+    blob_name = parsed.split(CONTAINER_NAME + "/")[1]
+    # results/user_at_example_com/filename.json
+
+    # 3️⃣ Download file bytes from Azure
+    file_bytes = await azure_blob_service.download_blob_bytes(blob_name)
+
+    # 4️⃣ Decode JSON content
+    try:
+        result_json = json.loads(file_bytes.decode("utf-8"))
+    except:
+        raise HTTPException(status_code=500, detail="Stored result file is corrupted.")
+
+    # Remove any Mongo leftover IDs
+    result_json.pop("_id", None)
+
+    # ---------------- JSON DOWNLOAD ----------------
     if format.lower() == "json":
-        json_bytes = json.dumps(
-            result,
-            indent=4,
-            default=datetime_converter   # <-- FIXED
-        ).encode("utf-8")
-
         return StreamingResponse(
-            io.BytesIO(json_bytes),
+            io.BytesIO(
+                json.dumps(result_json, indent=4, default=str).encode("utf-8")
+            ),
             media_type="application/json",
             headers={
                 "Content-Disposition": f"attachment; filename=analysis_{result_id}.json"
             }
         )
 
-    # -------------------------
-    # CSV DOWNLOAD
-    # -------------------------
+    # ---------------- CSV DOWNLOAD ----------------
     if format.lower() == "csv":
-        if "rows" not in result:
-            raise HTTPException(status_code=400, detail="No rows available for CSV export.")
+
+        if "rows" not in result_json:
+            raise HTTPException(status_code=400, detail="This result contains no rows to export.")
 
         output = io.StringIO()
         writer = None
 
-        for row in result["rows"]:
-            # Convert datetime fields inside rows if any
-            clean_row = {
-                k: (v.isoformat() if isinstance(v, datetime) else v)
-                for k, v in row.items()
-            }
-
+        for row in result_json["rows"]:
             if writer is None:
-                writer = csv.DictWriter(output, fieldnames=clean_row.keys())
+                writer = csv.DictWriter(output, fieldnames=row.keys())
                 writer.writeheader()
-
-            writer.writerow(clean_row)
+            writer.writerow(row)
 
         csv_bytes = output.getvalue().encode("utf-8")
 
@@ -310,5 +308,4 @@ async def download_result(
             }
         )
 
-    # Invalid format
-    raise HTTPException(status_code=400, detail="Invalid format. Use ?format=csv or ?format=json.")
+    raise HTTPException(status_code=400, detail="Invalid format. Use ?format=json or ?format=csv.")
