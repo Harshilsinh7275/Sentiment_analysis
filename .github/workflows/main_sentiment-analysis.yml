@@ -71,7 +71,8 @@ jobs:
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'sentiment-analysis-dnbcfjdxcefehgeu'
+          app-name: 'Sentiment-analysis-dnbcfjdxcefehgeu'
           slot-name: 'Production'
 
           
+
